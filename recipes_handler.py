@@ -72,17 +72,20 @@ async def get_recipes_by_category(message: types.Message, state: FSMContext):
     if not meals:
         await message.answer("Извините, но для этой категории нет рецептов.")
         return
-
-    if num_recipes > len(meals):
-        await message.answer(f"Извините, но в этой категории доступно только {len(meals)} рецепта.")
+    elif num_recipes > len(meals):
+        await message.answer(f"Извините, но в этой категории доступно только {len(meals)} рецепт(а).")
         num_recipes = len(meals)
-    print(num_recipes)
+
     selected_meals = random.sample(meals, k=num_recipes)
     await state.set_data({'selected_meals': selected_meals})
     recipe_names = [meal.get('strMeal') for meal in selected_meals]
-
-    rus_recipe_names = [translator.translate(recipe_name, dest='ru').text.capitalize() for recipe_name in recipe_names]
-
+    try:
+        rus_recipe_names = [
+            translator.translate(recipe_name, dest='ru').text.capitalize() for recipe_name in recipe_names
+        ]
+    except Exception as e:
+        print(f"Ошибка при переводе: оставляю на английском{e}")
+        rus_recipe_names = recipe_names
     message_text = "*Могу предложить такие варианты:*\n" + "\n".join(rus_recipe_names)
 
     reply_markup = types.ReplyKeyboardMarkup(
@@ -112,7 +115,11 @@ async def send_recipe_details(message: types.Message, state: FSMContext):
             instructions = recipe.get('strInstructions', 'Нет информации')
             recipe_text = f"Имя рецепта:\n{recipe_name}\n\nРецепт:\n{instructions}\n\nИнгредиенты:\n{ingredients}\n"
 
-            translated_recipe_text = translator.translate(recipe_text, dest='ru').text
+            try:
+                translated_recipe_text = translator.translate(recipe_text, dest='ru').text
+            except Exception as e:
+                print(f"Ошибка при переводе: оставляю на английском{e}")
+                translated_recipe_text = recipe_text
             translated_recipe_text_bold = (translated_recipe_text.replace('Рецепт:', '*Рецепт:*')
                                            .replace('Имя рецепта:', '*Имя рецепта:*')
                                            .replace('Ингредиенты:', '*Ингредиенты:*'))
